@@ -96,3 +96,16 @@ window.addEventListener('resize',()=>drawHistory());new ResizeObserver(()=>drawH
 note('Welcome to AETHER. Your Mac remains in control.');
 // Start with the resource dashboard: no fabricated telemetry while the helper connects.
 open('monitor');
+
+// Always expose the running application's identity, not just the source checkout.
+let runningBuild=null;
+const uiVersion=$('meta[name="aether-version"]').content;
+if(bridge)call('appInfo').then(info=>{
+ if(!info)return;runningBuild=info;
+ $('#buildInfo').textContent=`v${info.version} · ${info.packaged?'Installed app':'Source development'}`;
+ if(info.version!==uiVersion)toast('App and interface versions differ. Quit AETHER completely and restart the updated application.');
+}).catch(()=>{ $('#buildInfo').textContent=`UI v${uiVersion} · backend version unavailable`; });
+$('#buildInfo').onclick=()=>{
+ const el=$('#sidePanel');el.dataset.panel='build';el.classList.remove('hidden');
+ el.innerHTML=`<h3>About this running build</h3><div class="notice">Interface version: ${esc(uiVersion)}<br>App version: ${esc(runningBuild?.version||'Unavailable in browser preview')}<br>Launch mode: ${runningBuild?(runningBuild.packaged?'Installed application':'Source development'):'Browser preview'}</div><div class="notice">Application location<pre>${esc(runningBuild?.appPath||'Native app not connected')}</pre>Executable<pre>${esc(runningBuild?.executable||'Unavailable')}</pre></div><div class="unavailable">Pulling source updates does not update an installed DMG application or an already running process. Quit the old app, then launch from your updated checkout with npm start. To update the installed app, build and install a new DMG.</div>`;
+};

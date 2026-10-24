@@ -75,7 +75,7 @@ One inference job runs at a time. Cancel aborts the HTTP connection; this is bes
 
 ## Verification status
 
-`npm test`: sixteen automated policy, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
+`npm test`: eighteen automated policy, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
 
 **Still required on real macOS hardware before release:**
 
@@ -112,3 +112,10 @@ npm start
 ```
 
 Keep Ollama running separately (run `ollama serve` in another Terminal only if it is not already running). Open AI Workspace; the model picker and estimated budget populate automatically. Review the budget before sending. Fresh native memory data is still required for inference. `npm run dist:mac` creates updated installers on your Mac.
+
+
+### Still seeing “Invalid request” or “List installed models”?
+
+Those strings identify the original chat implementation, not the fixed model-picker interface. Git pull changes source files; it cannot update a running Electron process or the separate installed `/Applications/AETHER.app` bundle. Quit AETHER completely with Command-Q (use Ctrl-C in the terminal that launched a development copy), pull the working branch, then run `npm start` from that checkout. Do not relaunch the old Dock shortcut during this test.
+
+Version 0.1.1 displays **v0.1.1 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.

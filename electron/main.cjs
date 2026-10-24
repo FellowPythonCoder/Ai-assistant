@@ -8,6 +8,7 @@ async function safePath(relative=''){if(!root)throw Error('Choose an authorized 
 ipcMain.handle('action',async(event,name,args={})=>{try{
  if(event.sender!==win.webContents||!(event.senderFrame===win.webContents.mainFrame&&event.senderFrame.url===require('node:url').pathToFileURL(path.join(__dirname,'../ui/index.html')).href))throw Error('Untrusted sender');
  switch(name){
+ case 'appInfo':return {version:app.getVersion(),packaged:app.isPackaged,appPath:app.getAppPath(),executable:process.execPath};
  case 'metrics':return last;
  case 'fullscreen':win.setFullScreen(!win.isFullScreen());return true;
  case 'chooseFolder':{const d=await dialog.showOpenDialog(win,{properties:['openDirectory']});if(d.canceled)return null;root=await fs.realpath(d.filePaths[0]);return path.basename(root)}
@@ -35,5 +36,5 @@ ipcMain.handle('action',async(event,name,args={})=>{try{
  default:throw Error('Unsupported action');
  }
  }catch(e){return {error:e.message}}});
-app.whenReady().then(()=>{win=new BrowserWindow({width:1440,height:960,minWidth:900,minHeight:650,title:'AETHER',backgroundColor:'#080c12',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});win.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));win.loadFile('ui/index.html');win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());globalShortcut.register('CommandOrControl+Shift+Space',()=>{win.show();win.webContents.send('command')});native()});
+app.whenReady().then(()=>{win=new BrowserWindow({width:1440,height:960,minWidth:900,minHeight:650,title:`AETHER ${app.getVersion()} — ${app.isPackaged?'Installed app':'Source development'}`,backgroundColor:'#080c12',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});win.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));win.loadFile('ui/index.html');win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());globalShortcut.register('CommandOrControl+Shift+Space',()=>{win.show();win.webContents.send('command')});native()});
 app.on('will-quit',()=>{helper?.kill();globalShortcut.unregisterAll()});app.on('window-all-closed',()=>app.quit());
