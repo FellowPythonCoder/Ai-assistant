@@ -37,7 +37,7 @@ The workflow produces **unsigned, unnotarized** development builds. Gatekeeper m
 
 ## Desktop interactions
 
-- Floating dock opens, restores and focuses seven working tools.
+- Floating dock opens, restores and focuses eight working tools.
 - Drag title bars; use traffic-light controls to close/minimize/maximize. Double-click a title bar to maximize. Drag to a screen edge to snap left/right, or to the top to maximize.
 - Command palette: **⌘⇧Space** globally while the Mac app runs; **⌘K / Ctrl K** inside the workspace. Arrow keys and Enter select results. Escape dismisses panels.
 - App launcher discovers `.app` bundles directly under `/Applications`, `/System/Applications`, and `~/Applications`. Nested utility folders and external volumes are not recursively indexed yet.
@@ -75,7 +75,7 @@ One inference job runs at a time. Cancel aborts the HTTP connection; this is bes
 
 ## Verification status
 
-`npm test`: sixteen automated policy, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
+`npm test`: 31 automated policy, file-safety, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
 
 **Still required on real macOS hardware before release:**
 
@@ -93,9 +93,27 @@ One inference job runs at a time. Cancel aborts the HTTP connection; this is bes
 Do not mark real-Mac acceptance tests complete based on Linux or DOM test results.
 
 
-## Chat file creation
+## Natural-language file creation and editing (v0.1.3)
 
-“Create a file called hello.txt” (also “createa file called hello.txt”) is a real local tool action, not an Ollama prompt. A native Save dialog authorizes the exact destination. Cancel creates nothing; exclusive file creation never overwrites an existing file. The resulting file is empty. Content generation, arbitrary file writes, and shell execution are not implied by this command.
+Examples to type in AI Workspace:
+
+```text
+create a file called hello.txt in Documents
+create hello.txt in Desktop with content "Hello world"
+create "my notes.txt" in Downloads containing "Meeting at 3pm"
+edit hello.txt in Documents
+edit hello.txt in Documents replace "hello" with "hi"
+edit hello.txt in Documents append "One more line"
+edit this file to fix the spelling
+```
+
+These commands route to real file tools, not simulated model replies. Supported named locations are Documents, Desktop, Downloads, and the authorized folder. Other locations can be chosen in the native dialogs. Quote filenames containing spaces and text content. Create suggests the requested name/location in a native Save dialog; confirming authorizes the exact destination. Cancel creates nothing. Exclusive file creation never overwrites an existing file. Supplied text is written literally; no content means an empty file.
+
+Edit always opens a native file chooser (with the requested file suggested), which explicitly authorizes the file. “This file” asks you to choose it rather than guessing. Text Editor displays the read-only original beside the editable proposed text. Exact quoted replace, append and “to say” instructions prepare a proposal without a model. General instructions can be processed with **Generate proposal with AI**, using the model selected in AI Workspace. This sends only the chosen file text and instruction to local Ollama. AI output can be wrong or truncated: always review the entire proposed text. Generation does not save anything. Files over 20,000 characters must be edited manually, rather than sent through the small AI context. There is no arbitrary shell tool or automatic write from model output.
+
+Click **Save changes…** and confirm the native prompt to write. Saving creates a private original backup beside the file (`.aether-backup-<unique ID>` suffix). The editor displays its exact location. A snapshot hash detects external changes before writing; conflicting edits require reopening the file. Saves reject symlinks/hardlinks and use the opened file descriptor. Permission errors and write failures are shown; if a write fails after starting, the error identifies the recovery backup. File editing supports regular UTF-8 text up to 200 KB, not PDF, Word, image or binary documents. Session authorizations are in-memory, capped at ten files, and expire on restart or explicit discard. Concurrent external writes during the final write are not OS-coordinated; avoid editing the same file in two apps at once.
+
+**Linux validation:** automated tests exercise real temporary files, cancellation, backups, conflicts, UTF-8 validation, size limits, symlinks, authorization tokens and DOM edit-review flows. Actual macOS dialogs/permissions and local model edits still need a real-Mac run.
 
 ## Pull and run updates on your Mac
 
@@ -118,4 +136,4 @@ Keep Ollama running separately (run `ollama serve` in another Terminal only if i
 
 Those strings identify the original chat implementation, not the fixed model-picker interface. Git pull changes source files; it cannot update a running Electron process or the separate installed `/Applications/AETHER.app` bundle. Quit AETHER completely with Command-Q (use Ctrl-C in the terminal that launched a development copy), pull the working branch, then run `npm start` from that checkout. Do not relaunch the old Dock shortcut during this test.
 
-Version 0.1.2 displays **v0.1.2 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.
+Version 0.1.3 displays **v0.1.3 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.

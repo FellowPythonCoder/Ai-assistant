@@ -1,7 +1,9 @@
 const {app,BrowserWindow,ipcMain,globalShortcut,dialog,shell}=require('electron');
 const {spawn}=require('node:child_process'),fs=require('node:fs/promises'),path=require('node:path');
 const {workload}=require('./policy.cjs');
+const {makeTextFiles}=require('./text-files.cjs');
 let win,helper,last=null,root=null,active=null;
+const textFiles=makeTextFiles({dialog,window:()=>win,getPath:key=>app.getPath(key),getRoot:()=>root});
 async function ollama(endpoint,body,signal){const r=await fetch('http://127.0.0.1:11434/api/'+endpoint,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:signal||AbortSignal.timeout(5000)});if(!r.ok)throw Error('Ollama: '+r.status);return r.json()}
 function native(){if(process.platform!=='darwin')return;helper=spawn(app.isPackaged?path.join(process.resourcesPath,'aether-metrics'):path.join(__dirname,'../native/bin/aether-metrics'));let buffer='';helper.stdout.on('data',chunk=>{buffer+=chunk;let i;while((i=buffer.indexOf('\n'))>=0){try{const data=JSON.parse(buffer.slice(0,i));if(!data.error){last={...data,aetherPid:process.pid};win?.webContents.send('metrics',last)}}catch{}buffer=buffer.slice(i+1)}});helper.on('error',e=>win?.webContents.send('metrics',{error:e.message}));helper.on('exit',()=>{last=null;win?.webContents.send('metrics',{error:'Native metrics helper stopped.'})})}
 async function safePath(relative=''){if(!root)throw Error('Choose an authorized folder first.');if(typeof relative!=='string')throw Error('Invalid path');const p=await fs.realpath(path.resolve(root,relative));if(p!==root&&!p.startsWith(root+path.sep))throw Error('Outside authorized folder');return p}
@@ -13,14 +15,10 @@ ipcMain.handle('action',async(event,name,args={})=>{try{
  case 'fullscreen':win.setFullScreen(!win.isFullScreen());return true;
  case 'chooseFolder':{const d=await dialog.showOpenDialog(win,{properties:['openDirectory']});if(d.canceled)return null;root=await fs.realpath(d.filePaths[0]);return path.basename(root)}
  case 'files':{const p=await safePath(args.path);const entries=await fs.readdir(p,{withFileTypes:true});return Promise.all(entries.slice(0,500).map(async e=>{const s=await fs.lstat(path.join(p,e.name));return {name:e.name,directory:e.isDirectory(),size:s.size,symlink:e.isSymbolicLink()}}))}
- case 'createFile':{
-  if(typeof args.name!=='string'||!args.name.trim()||args.name.length>255||/[\\/\x00]/.test(args.name)||['.','..'].includes(args.name))throw Error('Use a file name without folders or path separators.');
-  const result=await dialog.showSaveDialog(win,{title:'Create file — choose its location',defaultPath:path.join(root||app.getPath('documents'),args.name),buttonLabel:'Create file'});
-  if(result.canceled||!result.filePath)return {canceled:true};
-  // Exclusive creation: never silently overwrite an existing file, even after a dialog.
-  try{await fs.writeFile(result.filePath,'',{flag:'wx',mode:0o600})}catch(e){if(e.code==='EEXIST')throw Error('That file already exists. Nothing was overwritten; choose a different name.');throw e}
-  return {canceled:false,path:result.filePath};
- }
+ case 'createFile':return await textFiles.create(args);
+ case 'editTextFile':return await textFiles.pick(args);
+ case 'saveTextFile':return await textFiles.save(args);
+ case 'releaseTextFile':return await textFiles.release(args);
  case 'openFile':return shell.openPath(await safePath(args.path));
  case 'preview':{const p=await safePath(args.path),s=await fs.stat(p);if(!s.isFile()||s.size>200000)throw Error('Preview supports text files under 200 KB.');return (await fs.readFile(p,'utf8')).replace(/\u0000/g,'')}
  case 'trash':{const p=await safePath(args.path);if(p===root)throw Error('Cannot trash authorized root');const d=await dialog.showMessageBox(win,{type:'warning',message:`Move ${path.basename(p)} to Trash?`,buttons:['Cancel','Move to Trash'],cancelId:0});if(d.response===1)await shell.trashItem(p);return d.response===1}
