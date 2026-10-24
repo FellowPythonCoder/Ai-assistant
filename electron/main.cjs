@@ -12,6 +12,14 @@ ipcMain.handle('action',async(event,name,args={})=>{try{
  case 'fullscreen':win.setFullScreen(!win.isFullScreen());return true;
  case 'chooseFolder':{const d=await dialog.showOpenDialog(win,{properties:['openDirectory']});if(d.canceled)return null;root=await fs.realpath(d.filePaths[0]);return path.basename(root)}
  case 'files':{const p=await safePath(args.path);const entries=await fs.readdir(p,{withFileTypes:true});return Promise.all(entries.slice(0,500).map(async e=>{const s=await fs.lstat(path.join(p,e.name));return {name:e.name,directory:e.isDirectory(),size:s.size,symlink:e.isSymbolicLink()}}))}
+ case 'createFile':{
+  if(typeof args.name!=='string'||!args.name.trim()||args.name.length>255||/[\\/\x00]/.test(args.name)||['.','..'].includes(args.name))throw Error('Use a file name without folders or path separators.');
+  const result=await dialog.showSaveDialog(win,{title:'Create file — choose its location',defaultPath:path.join(root||app.getPath('documents'),args.name),buttonLabel:'Create file'});
+  if(result.canceled||!result.filePath)return {canceled:true};
+  // Exclusive creation: never silently overwrite an existing file, even after a dialog.
+  try{await fs.writeFile(result.filePath,'',{flag:'wx',mode:0o600})}catch(e){if(e.code==='EEXIST')throw Error('That file already exists. Nothing was overwritten; choose a different name.');throw e}
+  return {canceled:false,path:result.filePath};
+ }
  case 'openFile':return shell.openPath(await safePath(args.path));
  case 'preview':{const p=await safePath(args.path),s=await fs.stat(p);if(!s.isFile()||s.size>200000)throw Error('Preview supports text files under 200 KB.');return (await fs.readFile(p,'utf8')).replace(/\u0000/g,'')}
  case 'trash':{const p=await safePath(args.path);if(p===root)throw Error('Cannot trash authorized root');const d=await dialog.showMessageBox(win,{type:'warning',message:`Move ${path.basename(p)} to Trash?`,buttons:['Cancel','Move to Trash'],cancelId:0});if(d.response===1)await shell.trashItem(p);return d.response===1}
@@ -23,7 +31,7 @@ ipcMain.handle('action',async(event,name,args={})=>{try{
  case 'modelCatalog':return ollama('tags');
  case 'unload':{const loaded=await ollama('ps');if(!loaded.models.some(m=>m.name===args.model))throw Error('Model is not loaded');const d=await dialog.showMessageBox(win,{message:`Unload ${args.model}?`,buttons:['Cancel','Unload'],cancelId:0});if(d.response!==1)return false;return ollama('generate',{model:args.model,keep_alive:0})}
  case 'cancel':active?.abort();return true;
- case 'infer':{if(active)throw Error('An AI job is already active');if(typeof args.prompt!=='string'||args.prompt.length>32000||(typeof args.model!=='string'||!args.model.trim()))throw Error('Invalid request');const loaded=await ollama('ps');const check=budget(last,loaded.models.filter(m=>m.name!==args.model),Number(args.estimate)*1024**3,args.concurrent===true);if(!check.allowed)throw Error(check.reason);const controller=new AbortController();active=controller;try{return await ollama('generate',{model:args.model,prompt:args.prompt,stream:false,keep_alive:'5m'},controller.signal)}finally{active=null}}
+ case 'infer':{if(active)throw Error('An AI job is already active');if(typeof args.prompt!=='string'||args.prompt.length>32000||(typeof args.model!=='string'||!args.model.trim()))throw Error('Enter a message and select an installed Ollama model before sending.');const catalog=await ollama('tags');if(!catalog.models.some(m=>m.name===args.model))throw Error('Selected model is not installed. Refresh installed models and select one.');const loaded=await ollama('ps');const check=budget(last,loaded.models.filter(m=>m.name!==args.model),Number(args.estimate)*1024**3,args.concurrent===true);if(!check.allowed)throw Error(check.reason);const controller=new AbortController();active=controller;try{return await ollama('generate',{model:args.model,prompt:args.prompt,stream:false,keep_alive:'5m',options:{num_ctx:2048}},controller.signal)}finally{active=null}}
  default:throw Error('Unsupported action');
  }
  }catch(e){return {error:e.message}}});

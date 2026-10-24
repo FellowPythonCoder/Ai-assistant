@@ -1,0 +1,5 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {planningBudget,selectModel}=require('../ui/model-config.js');
+test('planning budget uses metadata not disk size and rounds up',()=>{const details={parameter_size:'4.0B',quantization_level:'Q4_K_M'};assert.equal(planningBudget({details,size:1}),4.5);assert.equal(planningBudget({details,size:10**12}),4.5);assert.equal(planningBudget({details:{parameter_size:'500M',quantization_level:'F16'}}),3.5)});
+test('unknown parameter counts and quantizations require manual budget',()=>{assert.equal(planningBudget({details:{}}),null);assert.equal(planningBudget({details:{parameter_size:'4B',quantization_level:'unknown'}}),null)});
+test('model selection respects saved selection then loaded then first installed',()=>{const models=[{name:'qwen3:4b'},{name:'llama3.2:latest'}];assert.equal(selectModel(models,'llama3.2:latest').name,'llama3.2:latest');assert.equal(selectModel(models,'deleted',[{name:'llama3.2:latest'}]).name,'llama3.2:latest');assert.equal(selectModel(models,'deleted').name,'qwen3:4b');assert.equal(selectModel([],null),null)});
