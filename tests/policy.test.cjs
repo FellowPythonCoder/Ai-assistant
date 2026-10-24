@@ -1,7 +1,6 @@
-const {test}=require('node:test');const assert=require('node:assert/strict');const {budget}=require('../electron/policy.cjs');
-const GB=1024**3;const sample=(extra={})=>({timestamp:Date.now(),total:16*GB,available:10*GB,pressure:'normal',...extra});
-test('missing and stale telemetry cannot authorize model loading',()=>{assert.equal(budget(null,[],GB).allowed,false);assert.equal(budget(sample({timestamp:0}),[],GB).allowed,false)});
-test('critical pressure blocks loading',()=>assert.equal(budget(sample({pressure:'critical'}),[],GB).allowed,false));
-test('reserves OS and GPU headroom',()=>{assert.equal(budget(sample(),[],8*GB).allowed,false);assert.equal(budget(sample(),[],6*GB).allowed,true)});
-test('concurrent models require explicit consent and sufficient memory',()=>{assert.equal(budget(sample(),['model'],GB).allowed,false);assert.equal(budget(sample(),['model'],GB,true).allowed,true);assert.equal(budget(sample(),['model'],12*GB,true).allowed,false)});
-test('disk size is never substituted for runtime estimate',()=>{for(const value of [0,-1,NaN,undefined,Infinity])assert.equal(budget(sample(),[],value).allowed,false)});
+const {test}=require('node:test');const assert=require('node:assert/strict');const {workload}=require('../electron/policy.cjs');
+const sample=(extra={})=>({timestamp:Date.now(),total:16*1024**3,available:0,pressure:'normal',...extra});
+test('no memory estimate or minimum available capacity is required',()=>assert.equal(workload(sample(),[]).allowed,true));
+test('missing and stale telemetry warn without blocking inference',()=>{for(const s of [null,sample({timestamp:0})]){const result=workload(s,[]);assert.equal(result.allowed,true);assert.match(result.warning,/unavailable/)}});
+test('real pressure warns without imposing an AETHER cap',()=>{for(const pressure of ['elevated','critical']){const result=workload(sample({pressure}),[]);assert.equal(result.allowed,true);assert.match(result.warning,new RegExp(pressure))}});
+test('loading different models still requires explicit concurrency consent',()=>{assert.equal(workload(sample(),['other']).allowed,false);assert.equal(workload(sample(),['other'],true).allowed,true)});

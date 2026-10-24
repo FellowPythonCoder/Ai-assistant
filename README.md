@@ -65,9 +65,9 @@ The workflow produces **unsigned, unnotarized** development builds. Gatekeeper m
 
 Install/run Ollama separately at its default local API address `127.0.0.1:11434`. Only the Electron main process talks to that address; the web renderer does not call browser-localhost APIs.
 
-System questions such as “How much RAM is left?”, “Which process uses the most memory?”, “How much memory is Ollama consuming?”, and “Can I safely load the 8B model?” are answered by deterministic measured-data tools. Other prompts use the installed model selected in AI Workspace. The model picker discovers Ollama models automatically and remembers your choice (or selects an already loaded / first installed model). If discovery fails, start Ollama and click Refresh installed models. Missing model/budget validation preserves your draft instead of sending an invalid request.
+System questions such as “How much RAM is left?”, “Which process uses the most memory?”, “How much memory is Ollama consuming?”, and “Can I safely load the 8B model?” are answered by deterministic measured-data tools. Other prompts use the installed model selected in AI Workspace. The model picker discovers Ollama models automatically and remembers your choice (or selects an already loaded / first installed model). If discovery fails, start Ollama and click Refresh installed models. Missing model validation preserves your draft instead of sending an invalid request.
 
-Before generation/loading, fresh native telemetry is mandatory. Review the **estimated runtime budget in GB**. When parameter count and quantization metadata are available, the field is prefilled with a heuristic (parameter billions × quantization bits / 8 × 1.25 + 2 GB, rounded up to 0.5 GB). This is a planning estimate, not measured RAM or a guarantee. Unknown metadata requires a manual budget. User edits and model selection are saved. Generation is capped at a 2048-token context. Model disk size is never used as a RAM estimate. AETHER keeps a reserve of the greater of 2 GiB or 15% physical memory for OS/GPU headroom, blocks critical pressure, and blocks simultaneous different models unless explicitly allowed and the estimate fits. Estimates do not guarantee successful inference. Use a smaller quantization/context if necessary. The app never downloads models automatically.
+**No AETHER-enforced RAM cap (v0.1.2):** the GB budget field, estimated-capacity blocking and OS/GPU safety-reserve gate have been removed at the user's request. Select an installed model and send a message; no GB estimate is required. Old saved budget values are ignored. Native telemetry is advisory, not a prerequisite for inference. Actual elevated/critical pressure or missing telemetry produces warnings, not a RAM-cap rejection. Ollama and macOS still control real allocation: finite physical memory, swapping and out-of-memory failures still apply. AETHER does not set an Ollama memory limit or make the system's RAM unlimited. Concurrent different models still require explicitly enabling Allow concurrent. Context remains capped at 2048 tokens, which is a context setting, not a RAM quota. Use smaller models or quantizations when needed. Models are never downloaded automatically.
 
 Effects are reduced on elevated/critical measured pressure. Notifications suggest unloading idle models; unloading requires native confirmation. Eligible user app processes can be signaled only after confirmation; protected system paths, root processes, and AETHER components are blocked. Force quit explicitly warns about unsaved data. AETHER never automatically kills applications.
 
@@ -75,7 +75,7 @@ One inference job runs at a time. Cancel aborts the HTTP connection; this is bes
 
 ## Verification status
 
-`npm test`: eighteen automated policy, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
+`npm test`: sixteen automated policy, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
 
 **Still required on real macOS hardware before release:**
 
@@ -111,11 +111,11 @@ npm test
 npm start
 ```
 
-Keep Ollama running separately (run `ollama serve` in another Terminal only if it is not already running). Open AI Workspace; the model picker and estimated budget populate automatically. Review the budget before sending. Fresh native memory data is still required for inference. `npm run dist:mac` creates updated installers on your Mac.
+Keep Ollama running separately (run `ollama serve` in another Terminal only if it is not already running). Open AI Workspace; the model picker populates automatically. There is no GB budget field or AETHER memory-capacity gate. Review the live memory warnings before loading large models. `npm run dist:mac` creates updated installers on your Mac.
 
 
 ### Still seeing “Invalid request” or “List installed models”?
 
 Those strings identify the original chat implementation, not the fixed model-picker interface. Git pull changes source files; it cannot update a running Electron process or the separate installed `/Applications/AETHER.app` bundle. Quit AETHER completely with Command-Q (use Ctrl-C in the terminal that launched a development copy), pull the working branch, then run `npm start` from that checkout. Do not relaunch the old Dock shortcut during this test.
 
-Version 0.1.1 displays **v0.1.1 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.
+Version 0.1.2 displays **v0.1.2 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.
