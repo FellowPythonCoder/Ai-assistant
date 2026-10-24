@@ -75,7 +75,7 @@ One inference job runs at a time. Cancel aborts the HTTP connection; this is bes
 
 ## Verification status
 
-`npm test`: 31 automated policy, file-safety, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
+`npm test`: 36 automated policy, file-safety, model-configuration and DOM interaction tests, including the reported greeting and file-creation regressions. Synthetic telemetry is used **only in tests**, never shipped as sample runtime data. `npm audit`: zero known vulnerabilities at implementation time.
 
 **Still required on real macOS hardware before release:**
 
@@ -136,4 +136,9 @@ Keep Ollama running separately (run `ollama serve` in another Terminal only if i
 
 Those strings identify the original chat implementation, not the fixed model-picker interface. Git pull changes source files; it cannot update a running Electron process or the separate installed `/Applications/AETHER.app` bundle. Quit AETHER completely with Command-Q (use Ctrl-C in the terminal that launched a development copy), pull the working branch, then run `npm start` from that checkout. Do not relaunch the old Dock shortcut during this test.
 
-Version 0.1.3 displays **v0.1.3 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.
+Version 0.1.4 displays **v0.1.4 · Source development** at the bottom when launched from source. Click that badge to see the actual application path and executable. The AI workspace must show **Refresh installed models** and a model dropdown. If you want the Dock/installed version updated too, build a new DMG, quit the old app, and replace the installed app with the newly built copy.
+
+
+### Chat routing fix (v0.1.4)
+
+System telemetry is queried only for explicit system questions. The old substring check matched `ram` inside `program` and `prgram`, causing programming prompts to receive memory reports instead of reaching Ollama. The router now uses tested explicit-question patterns; ordinary code, image-processing and history prompts are left to the selected model. Routine unknown/normal pressure banners and memory-advisory prefixes on model replies are removed. Actual elevated/critical pressure remains visible as a separate warning and clears on recovery. The system monitor and memory widget are unchanged.
